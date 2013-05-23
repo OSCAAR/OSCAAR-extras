@@ -1,7 +1,7 @@
 OSCAAR-extras
 =============
 
-![Link to OSCAAR-extras wiki](http://www.astro.umd.edu/~bmorris3/oscaar/extrasReadme.png)
+[![Link to OSCAAR-extras wiki](http://www.astro.umd.edu/~bmorris3/oscaar/extrasReadme.png)](https://github.com/OSCAAR/OSCAAR-extras/wiki)
 
 
 
