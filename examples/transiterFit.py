@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 import oscaar
 from oscaar import transiter
 from scipy import optimize
-import random
+#import random
 
 sampleData = oscaar.load('sampleOutput/oscaarDataBase.pkl')
 
@@ -16,14 +16,19 @@ timeObs=sampleData.times
 RpOverRs = 0.13			## R_p/R_s = ratio of planetary radius to stellar radius
 aOverRs = 15.0                  ## a/R_s = ratio of semimajor axis to stellar radius
 period = 1.58			## Period [days]
-inclination = 89.0		## Inclination [degrees]
-epoch = timeObs[np.size(timeObs)/2]	## Mid transit time [Julian date]
+inclination = 88.0		## Inclination [degrees]
+epoch = timeObs[np.size(timeObs)/2]	## Mid transit time [Julian date], guess is at middle of the dataset. 
 gamma1 = 0.23			## Linear limb-darkening coefficient
 gamma2 = 0.45			## Quadratic limb-darkening coefficient
 eccentricity = 0.0		## Eccentricity
 longPericenter = 0.0		## Longitude of pericenter
 
 modelParams = [RpOverRs,aOverRs,period,inclination,gamma1,gamma2,eccentricity,longPericenter,epoch]
+
+#Look at the value of the impact parameter and make sure it's reasonable.
+b = aOverRs * np.cos(inclination*np.pi/180.)
+print "Impact Parameter: ",b
+print "If the value of the impact parameter is close to or greater than 1, then you are inputting an inital guess of a grazing transit. This may lead the fitting function to a unaccurate fit. I suggest intial guesses of b = 0.5 or so should give enough room to find a more accurate answer."  
 
 #Duration of Transit
 durationObs = timeObs[np.size(timeObs)-1]-timeObs[0]
@@ -48,7 +53,7 @@ plt.show()
 #Run Prayer-Bead or Random Markov Chain to estimate uncertainties.
 def shuffle(x):
     x = list(x)
-    random.shuffle(x)
+    #random.shuffle(x)
     return x
 
 #Generate residuals
@@ -58,7 +63,7 @@ residuals = NormFlux - modelOut
 RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
 
 #Generate random datasets based on residuals from inital fit. 
-n_sets = 1000
+n_sets = 100
 Rp,aRs,inc,mid=[],[],[],[]
 MCset,randSet = [],[]
 for i in range(0,n_sets):
