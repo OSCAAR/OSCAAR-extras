@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import oscaar
 from oscaar import transiter
 from scipy import optimize
+from numpy.random import shuffle
 #import random
 
 sampleData = oscaar.load('sampleOutput/oscaarDataBase.pkl')
@@ -10,6 +11,7 @@ sampleData = oscaar.load('sampleOutput/oscaarDataBase.pkl')
 #Fitting to the Data
 NormFlux=sampleData.lightCurve
 timeObs=sampleData.times
+flux_error=sampleData.lightCurveError
 
 #Orbital Parameters for GJ1208
 ## Define system parameters for planet GJ 
@@ -37,6 +39,7 @@ durationObs = timeObs[np.size(timeObs)-1]-timeObs[0]
 fit,success=optimize.curve_fit(oscaar.transitModel.occultquad,xdata=timeObs,
                                ydata=NormFlux,
                                p0=(RpOverRs,aOverRs,inclination,epoch),
+                               sigma=sampleData.lightCurveError,
                                maxfev=10000000,
                                xtol=2e-15,
                                ftol=2e-16)
@@ -49,11 +52,11 @@ for i in range(0,np.size(fit)):
 plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,fit[0],fit[1],fit[2],fit[3]))
 plt.plot(timeObs,NormFlux,'o')
 plt.show()
+plt.close()
 
 #Run Prayer-Bead or Random Markov Chain to estimate uncertainties.
-def shuffle(x):
-    x = list(x)
-    #random.shuffle(x)
+def shuffle_func(x):
+    shuffle(x)
     return x
 
 #Generate residuals
@@ -63,16 +66,17 @@ residuals = NormFlux - modelOut
 RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
 
 #Generate random datasets based on residuals from inital fit. 
-n_sets = 100
+n_sets = 1000
 Rp,aRs,inc,mid=[],[],[],[]
 MCset,randSet = [],[]
 for i in range(0,n_sets):
-    MCset = shuffle(residuals)
+    MCset = shuffle_func(residuals)
     randSet = MCset + modelOut
     fit,success=optimize.curve_fit(oscaar.transitModel.occultquad,xdata=timeObs,
                                ydata=randSet,
                                p0=(RpFit,aRsFit,incFit,epochFit),
                                maxfev=10000000,
+                               sigma=flux_error,
                                xtol=2e-15,
                                ftol=2e-16)
     
@@ -81,6 +85,17 @@ for i in range(0,n_sets):
     aRs.append(fit[1])
     inc.append(fit[2])
     mid.append(fit[3])
+    
+    #Plotting output fits for a visual check
+    plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,fit[0],fit[1],fit[2],fit[3]))
+
+plt.errorbar(timeObs,NormFlux,yerr=flux_error,linestyle='None',marker='.',label="Data")
+plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,RpFit,aRsFit,incFit,epochFit),lw=3.0,color='k',label="Inital Fit")
+plt.title('Results from Random MC Fits')
+plt.xlabel('JD (days)')
+plt.ylabel('Normalized Flux')
+plt.legend()
+plt.show()
 
 print "Planetary to Stellar Radius: ",np.mean(Rp),np.std(Rp)
 print "Semi-major Axis to Stellar Radius: ",np.mean(aRs),np.std(aRs)
