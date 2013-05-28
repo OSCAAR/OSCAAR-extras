@@ -30,7 +30,8 @@ modelParams = [RpOverRs,aOverRs,period,inclination,gamma1,gamma2,eccentricity,lo
 #Look at the value of the impact parameter and make sure it's reasonable.
 b = aOverRs * np.cos(inclination*np.pi/180.)
 print "Impact Parameter: ",b
-print "If the value of the impact parameter is close to or greater than 1, then you are inputting an inital guess of a grazing transit. This may lead the fitting function to a unaccurate fit. I suggest intial guesses of b = 0.5 or so should give enough room to find a more accurate answer."  
+print "If the value of the impact parameter is close to or greater than 1, then you are inputting an inital guess of a grazing transit. This may lead the fitting function to a unaccurate fit."
+print "I suggest intial guesses of b = 0.5 or so should give enough room to find a more accurate answer. (assuming it isn't a grazing transit)"  
 
 #Duration of Transit
 durationObs = timeObs[np.size(timeObs)-1]-timeObs[0]
@@ -66,17 +67,24 @@ residuals = NormFlux - modelOut
 RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
 
 #Generate random datasets based on residuals from inital fit. 
-n_sets = 1000
+n_sets = 10000
 Rp,aRs,inc,mid=[],[],[],[]
-MCset,randSet = [],[]
 for i in range(0,n_sets):
-    MCset = shuffle_func(residuals)
+    
+    #Randomly shuffling both data/uncertainties together 
+    MCset,randSet,SigSet = [],[],[]
+    index_shuf = range(len(residuals))
+    shuffle(index_shuf)
+    for i in index_shuf:
+        MCset.append(residuals[i])
+        SigSet.append(flux_error[i])
+    
     randSet = MCset + modelOut
     fit,success=optimize.curve_fit(oscaar.transitModel.occultquad,xdata=timeObs,
                                ydata=randSet,
                                p0=(RpFit,aRsFit,incFit,epochFit),
                                maxfev=10000000,
-                               sigma=flux_error,
+                               sigma=SigSet,
                                xtol=2e-15,
                                ftol=2e-16)
     
@@ -89,6 +97,7 @@ for i in range(0,n_sets):
     #Plotting output fits for a visual check
     plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,fit[0],fit[1],fit[2],fit[3]))
 
+#Visually compare MC fits to inital fit and observational data.
 plt.errorbar(timeObs,NormFlux,yerr=flux_error,linestyle='None',marker='.',label="Data")
 plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,RpFit,aRsFit,incFit,epochFit),lw=3.0,color='k',label="Inital Fit")
 plt.title('Results from Random MC Fits')
