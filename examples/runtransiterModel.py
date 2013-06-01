@@ -5,10 +5,10 @@ from scipy import optimize
 from numpy.random import shuffle
 
 #Load in the data from OSCAAR output. 
-sampleData = oscaar.load('sampleOutput/oscaarDataBase.pkl')
-NormFlux=sampleData.lightCurve
-timeObs=sampleData.times
-flux_error=sampleData.lightCurveError
+#sampleData = oscaar.load('sampleOutput/oscaarDataBase.pkl')
+#NormFlux=sampleData.lightCurve
+#timeObs=sampleData.times
+#flux_error=sampleData.lightCurveError
 
 #Orbital Parameters for GJ1208
 #RpOverRs = 0.117		## R_p/R_s = ratio of planetary radius to stellar radius
@@ -21,23 +21,38 @@ flux_error=sampleData.lightCurveError
 #eccentricity = 0.0		## Eccentricity
 #longPericenter = 0.0		## Longitude of pericenter
 
+#def getPeriod():
+#    return period
+
+#def getGam1():
+#    return gamma1
+
+#def getGam2():
+#    return gamma2
+
+#def getEcc():
+#    return eccentricity
+
+#def getArgPer():
+#    return longPericenter
+
 ## Initial Guesses for Planetary Parameters  
 RpOverRs = 0.117
 aOverRs = 14.7
 period = 1.58
 inclination = 89.5
-epoch = timeObs[np.size(timeObs)/2]
-gamma1 = 0.23
+epoch = 2454344.30867
+gamma1 = 0.20
 gamma2 = 0.30
 eccentricity = 0.0
 longPericenter = 0.0
 
 #Parameters for making fake data for a fake planet
-fk_RpRs=0.17
-fk_aRs=10.7
+fk_RpRs=0.12
+fk_aRs=12.7
 fk_per=1.58
 fk_inc=89.9
-fk_t0=timeObs[np.size(timeObs)/2]
+fk_t0=2454344.30867
 fk_gam1=0.23
 fk_gam2=0.30
 fk_ecc=0.0
@@ -45,13 +60,12 @@ fk_argper=0.0
 stddev=0.001 #Standard Deviation of data. 
 
 #Creating fake dataset, including flux, time, and uncertainty
-#timeObs,NormFlux=fake_data(stddev,fk_RpRs,fk_aRs,fk_per,fk_inc,fk_t0,fk_gam1,fk_gam2,fk_ecc,fk_argper)
-#flux_error=stddev*np.ones(np.size(timeObs))
+timeObs,NormFlux=fake_data(stddev,fk_RpRs,fk_aRs,fk_per,fk_inc,fk_t0,fk_gam1,fk_gam2,fk_ecc,fk_argper)
+flux_error=stddev*np.ones(np.size(timeObs))
 
-modelParams = [RpOverRs,aOverRs,period,inclination,gamma1,gamma2,eccentricity,longPericenter,epoch]
+#Run the intial fit with input parameters stated above. 
+fit,success = run_LMfit(timeObs,NormFlux,flux_error,RpOverRs,aOverRs,inclination,epoch,plotting=True)
 
-#Look at the value of the impact parameter and make sure it's reasonable.
-b = aOverRs * np.cos(inclination*np.pi/180.)
-print "Impact Parameter: ",b  
-print ""
-print "Care should be taken to make sure the input parameters reflect archival results."
+#Run MC fit to estimate uncertainty
+run_MCfit(1000,timeObs,NormFlux,flux_error,fit,success,plotting=True)
+
