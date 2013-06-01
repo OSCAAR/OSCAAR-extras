@@ -4,7 +4,7 @@ import oscaar
 from scipy import optimize
 from numpy.random import shuffle
 
-#Work below is from Nolan Matthews while using some of Brett Morris's
+#Work below is from Nolan Matthews while relying on some of Brett Morris's
 #code, particularly the transitModel.py,simulatedLightCurve.py, and
 #modelLightCurve.py scripts.
 
@@ -34,19 +34,19 @@ def fake_data(stddev,RpRs,aRs,per,inc,midtrantime,gamma1,gamma2,ecc,argper):
     #fake_data = oscaar.occultquad(times,modelParams) + np.random(scale=stddev,size=np.size(times))
     
     #Uses alternate input parameters setup for occultquad.
-    perfect_data = oscaar.transitModel.occultquad(times,RpRs,aRs,inc,midtrantime)
+    perfect_data = oscaar.transitModel.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime)
     random_dist = np.random.normal(scale=stddev,size=np.size(times))
     fk_data = perfect_data + random_dist
     
     return times,fk_data
 
 #Runs the intial fit using the LM least sq. algorithm. 
-def run_LMfit(timeObs,NormFlux,flux_error,plotting=True):
+def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess,plotting=True):
 
-    fit,success=optimize.curve_fit(oscaar.transitModel.occultquad,
+    fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,
                                    xdata=timeObs,
                                    ydata=NormFlux,
-                                   p0=(RpOverRs,aOverRs,inclination,epoch),
+                                   p0=(RpRsGuess,aRsGuess,incGuess,epochGuess),
                                    sigma=flux_error,
                                    maxfev=100000,
                                    xtol=2e-15,
@@ -63,10 +63,11 @@ def run_LMfit(timeObs,NormFlux,flux_error,plotting=True):
         params = ["Rp/Rs","a/Rs","inc","Mid-Tran Time"]
         for i in range(0,np.size(fit)):
             print params[i],fit[i],"+/-",np.sqrt(success[i][i])
-            
+        print ""
+        
     #Visually check to see if it's reasonable
     if plotting == True:
-        plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,fit[0],fit[1],fit[2],fit[3]))
+        plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
         plt.plot(timeObs,NormFlux,'o')
         plt.show()
         plt.close()
@@ -84,7 +85,7 @@ def shuffle_func(x):
 #Monte Carlo method. 
 def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=True):
 
-    modelOut  = oscaar.transitModel.occultquad(timeObs,fit[0],fit[1],fit[2],fit[3])
+    modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3])
     residuals = NormFlux - modelOut
 
     RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
@@ -104,7 +105,7 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=True):
         
         #Generate random dataset and fit to the function.
         randSet = MCset + modelOut
-        fit,success=optimize.curve_fit(oscaar.transitModel.occultquad,xdata=timeObs,
+        fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,xdata=timeObs,
                                    ydata=randSet,
                                    p0=(RpFit,aRsFit,incFit,epochFit),
                                    maxfev=10000,
@@ -119,12 +120,12 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=True):
         mid.append(fit[3])
         
         if plotting == True: 
-            plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,fit[0],fit[1],fit[2],fit[3]))
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
         
     #Visually compare MC fits to inital fit and observational data.
     if plotting == True:
         plt.errorbar(timeObs,NormFlux,yerr=flux_error,linestyle='None',marker='.',label="Data")
-        plt.plot(timeObs,oscaar.transitModel.occultquad(timeObs,RpFit,aRsFit,incFit,epochFit),lw=3.0,color='k',label="Inital Fit")
+        plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),lw=3.0,color='k',label="Inital Fit")
         plt.title('Results from Random MC Fits')
         plt.xlabel('JD (days)')
         plt.ylabel('Normalized Flux')
