@@ -56,7 +56,7 @@ flux_error=stddev*np.ones(np.size(timeObs))
 
 ## Initial Guesses for Planetary Parameters  
 RpOverRs = 0.117
-aOverRs = 13.7
+aOverRs = 12.9
 period = 1.58
 inclination = 89.5
 epoch = 2454344.30867
