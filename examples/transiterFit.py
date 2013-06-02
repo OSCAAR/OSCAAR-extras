@@ -69,6 +69,9 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
     if plotting == True:
         plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
         plt.plot(timeObs,NormFlux,'o')
+        plt.title('Result from initial LM Fit')
+        plt.xlabel('JD (d)')
+        plt.xlim(xmin=timeObs[0],xmax=timeObs[len(timeObs)-1])
         plt.show()
         plt.close()
     
@@ -83,7 +86,7 @@ def shuffle_func(x):
 
 #Function that allows one to determine model uncertainties using a random
 #Monte Carlo method. 
-def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=True):
+def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
 
     modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3])
     residuals = NormFlux - modelOut
@@ -125,13 +128,16 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=True):
     #Visually compare MC fits to inital fit and observational data.
     if plotting == True:
         plt.errorbar(timeObs,NormFlux,yerr=flux_error,linestyle='None',marker='.',label="Data")
-        plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),lw=3.0,color='k',label="Inital Fit")
+        plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),
+                 lw=2.0,color='k',label="Inital Fit")
         plt.title('Results from Random MC Fits')
         plt.xlabel('JD (days)')
         plt.ylabel('Normalized Flux')
-        plt.legend()
+        plt.xlim(xmin=timeObs[0],xmax=timeObs[len(timeObs)-1])
+        plt.legend(loc=7)
         plt.show()
         plt.close()
+        plt.clf()
         
     print "Results from random MC fit . . . . . "     
     print "Planetary to Stellar Radius: ",np.mean(Rp),"+/-",np.std(Rp)
