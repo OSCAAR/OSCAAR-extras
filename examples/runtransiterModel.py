@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import oscaar
 from scipy import optimize
 from numpy.random import shuffle
+import transiterFit
 
 #Load in the data from OSCAAR output. 
 #sampleData = oscaar.load('sampleOutput/oscaarDataBase.pkl')
@@ -36,22 +37,12 @@ from numpy.random import shuffle
 #def getArgPer():
 #    return longPericenter
 
-## Initial Guesses for Planetary Parameters  
-RpOverRs = 0.117
-aOverRs = 14.7
-period = 1.58
-inclination = 89.5
-epoch = 2454344.30867
-gamma1 = 0.20
-gamma2 = 0.30
-eccentricity = 0.0
-longPericenter = 0.0
 
 #Parameters for making fake data for a fake planet
 fk_RpRs=0.12
 fk_aRs=12.7
 fk_per=1.58
-fk_inc=89.9
+fk_inc=89.5
 fk_t0=2454344.30867
 fk_gam1=0.23
 fk_gam2=0.30
@@ -60,12 +51,23 @@ fk_argper=0.0
 stddev=0.001 #Standard Deviation of data. 
 
 #Creating fake dataset, including flux, time, and uncertainty
-timeObs,NormFlux=fake_data(stddev,fk_RpRs,fk_aRs,fk_per,fk_inc,fk_t0,fk_gam1,fk_gam2,fk_ecc,fk_argper)
+timeObs,NormFlux=transiterFit.fake_data(stddev,fk_RpRs,fk_aRs,fk_per,fk_inc,fk_t0,fk_gam1,fk_gam2,fk_ecc,fk_argper)
 flux_error=stddev*np.ones(np.size(timeObs))
 
+## Initial Guesses for Planetary Parameters  
+RpOverRs = 0.117
+aOverRs = 13.7
+period = 1.58
+inclination = 89.5
+epoch = 2454344.30867
+gamma1 = 0.23
+gamma2 = 0.30
+eccentricity = 0.0
+longPericenter = 0.0
+
 #Run the intial fit with input parameters stated above. 
-fit,success = run_LMfit(timeObs,NormFlux,flux_error,RpOverRs,aOverRs,inclination,epoch,plotting=True)
+fit,success = transiterFit.run_LMfit(timeObs,NormFlux,flux_error,RpOverRs,aOverRs,inclination,epoch,plotting=True)
 
 #Run MC fit to estimate uncertainty
-run_MCfit(1000,timeObs,NormFlux,flux_error,fit,success,plotting=True)
+transiterFit.run_MCfit(1000,timeObs,NormFlux,flux_error,fit,success,plotting=True)
 
