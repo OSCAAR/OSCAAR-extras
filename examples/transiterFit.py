@@ -108,7 +108,7 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=True):
         fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,xdata=timeObs,
                                    ydata=randSet,
                                    p0=(RpFit,aRsFit,incFit,epochFit),
-                                   maxfev=10000,
+                                   maxfev=100000,
                                    sigma=SigSet,
                                    xtol=2e-15,
                                    ftol=2e-16)
