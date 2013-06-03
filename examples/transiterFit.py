@@ -6,7 +6,10 @@ from numpy.random import shuffle
 
 #Work below is from Nolan Matthews while relying on some of Brett Morris's
 #code, particularly the transitModel.py,simulatedLightCurve.py, and
-#modelLightCurve.py scripts.
+#modelLightCurve.py scripts. Additionally the light curve model used for fitting
+#is Jason Eastman's occultquad function (Eastman et. al 2013) based on the analytical derivations
+#from Mandel & Agol (2002) and using C implementation from Brett Morris.
+#See the transitModel.py file for more info. 
 
 #The script below allows two functionalities. There are some functions
 #defined that allow the user to create a fake dataset. These were used
@@ -34,19 +37,28 @@ def fake_data(stddev,RpRs,aRs,per,inc,midtrantime,gamma1,gamma2,ecc,argper):
     #fake_data = oscaar.occultquad(times,modelParams) + np.random(scale=stddev,size=np.size(times))
     
     #Uses alternate input parameters setup for occultquad.
-    perfect_data = oscaar.transitModel.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime)
+    perfect_data = oscaar.transitModel.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime,gamma1,gamma2)
     random_dist = np.random.normal(scale=stddev,size=np.size(times))
     fk_data = perfect_data + random_dist
     
     return times,fk_data
 
 #Runs the intial fit using the LM least sq. algorithm. 
-def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess,plotting=True):
+def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess,fitLimbDark=False,plotting=True):
+    
+    #Setting up inital guess, dependent on inclusion of limb-darkening
+    if fitLimbDark == False:
+        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess)
+    elif fitLimbDark == 'linear':
+        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,0.5)
+    elif fitLimbDark == 'quadratic':
+        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,0.2,0.3)
 
+    #Runs the inital fit
     fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,
                                    xdata=timeObs,
                                    ydata=NormFlux,
-                                   p0=(RpRsGuess,aRsGuess,incGuess,epochGuess),
+                                   p0=initGuess,
                                    sigma=flux_error,
                                    maxfev=100000,
                                    xtol=2e-15,
@@ -60,14 +72,20 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
     #If Convergence is True, look at the results to double check.
     else:
         print "Results from the inital fit w/ uncertainties based on the sq. root of the covariance matrix"
-        params = ["Rp/Rs","a/Rs","inc","Mid-Tran Time"]
+        params = ["Rp/Rs","a/Rs","inc","Mid-Tran Time","Gamma 1","Gamma2"]
         for i in range(0,np.size(fit)):
             print params[i],fit[i],"+/-",np.sqrt(success[i][i])
         print ""
         
     #Visually check to see if it's reasonable
     if plotting == True:
-        plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
+        if fitLimbDark == False:
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
+        elif fitLimbDark == 'linear':
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4]))            
+        elif fitLimbDark == 'quadratic':
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5]))            
+        
         plt.plot(timeObs,NormFlux,'o')
         plt.title('Result from initial LM Fit')
         plt.xlabel('JD (d)')
@@ -88,14 +106,26 @@ def shuffle_func(x):
 #Monte Carlo method. 
 def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
 
-    modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3])
-    residuals = NormFlux - modelOut
-
     RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
-
+    
+    #Create model, dependent on inclusion of limb-darkening
+    if len(fit) == 4:
+        modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3])
+        initGuess = (fit[0],fit[1],fit[2],fit[3])
+    elif len(fit) == 5:
+        modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4])
+        initGuess = (fit[0],fit[1],fit[2],fit[3],fit[4])
+        gam1Fit = fit[4]
+    elif len(fit) == 6:
+        modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5])
+        initGuess = (fit[0],fit[1],fit[2],fit[3],fit[4],fit[5])
+        gam1Fit,gam2Fit = fit[4],fit[5]
+    
+    residuals = NormFlux - modelOut
+    
     #Generate random datasets based on residuals from inital fit. 
     n_sets = n_iter
-    Rp,aRs,inc,mid=[],[],[],[]
+    Rp,aRs,inc,mid,gam1,gam2=[],[],[],[],[],[]
     for i in range(0,n_sets):
     
         #Randomly shuffling both data/uncertainties together 
@@ -108,9 +138,10 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
         
         #Generate random dataset and fit to the function.
         randSet = MCset + modelOut
-        fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,xdata=timeObs,
+        fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,
+                                    xdata=timeObs,
                                    ydata=randSet,
-                                   p0=(RpFit,aRsFit,incFit,epochFit),
+                                   p0=initGuess,
                                    maxfev=100000,
                                    sigma=SigSet,
                                    xtol=2e-15,
@@ -121,15 +152,32 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
         aRs.append(fit[1])
         inc.append(fit[2])
         mid.append(fit[3])
-        
-        if plotting == True: 
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
-        
+        if len(fit) == 5 or len(fit) == 6:
+            gam1.append(fit[4])
+        if len(fit) == 6:
+            gam2.append(fit[5])
+            
+        if plotting == True:
+            if len(fit) == 4:
+                plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
+            elif len(fit) == 5:
+                plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4]))
+            elif len(fit) == 6:
+                plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5]))
+
     #Visually compare MC fits to inital fit and observational data.
     if plotting == True:
         plt.errorbar(timeObs,NormFlux,yerr=flux_error,linestyle='None',marker='.',label="Data")
-        plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),
-                 lw=2.0,color='k',label="Inital Fit")
+        
+        if len(fit) == 4:
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),
+                     lw=2.0,color='k',label="Inital Fit")
+        elif len(fit) == 5:
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit,gam1Fit),
+                     lw=2.0,color='k',label="Inital Fit")
+        elif len(fit) == 6:
+            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit,gam1Fit,gam2Fit),
+                     lw=2.0,color='k',label="Inital Fit")
         plt.title('Results from Random MC Fits')
         plt.xlabel('JD (days)')
         plt.ylabel('Normalized Flux')
@@ -144,5 +192,7 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
     print "Semi-major Axis to Stellar Radius: ",np.mean(aRs),"+/-",np.std(aRs)
     print "Inclination of Orbit: ",np.mean(inc),"+/-",np.std(inc)
     print "Mid-Transit Time [JD]: ",np.mean(mid),"+/-",np.std(mid)
-    
-    
+    if len(fit) == 5 or len(fit) == 6:
+        print "Gamma 1: ",np.mean(gam1),"+/-",np.std(gam1)
+    if len(fit) == 6:
+        print "Gamma 2: ",np.mean(gam2),"+/-",np.std(gam2)
