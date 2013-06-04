@@ -54,8 +54,14 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
     elif fitLimbDark == 'quadratic':
         initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,0.2,0.3)
 
+    
+    [RpOverRs_database,aOverRs_databse,P_database,inc_database,ecc_database] = returnSystemParams.transiterParams(planet)
+    def occultquadForTransiter(t,p,ap,i,t0,gamma1=0.0,gamma2=0.0,P=P_database,e=ecc_database,longPericenter=0.0):
+        modelParams = [p,ap,P,i,gamma1,gamma2,e,longPericenter,t0]
+        return oscaar.transitModel.occultquad(t,modelParams)
+
     #Runs the inital fit
-    fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,
+    fit,success=optimize.curve_fit(occultquadForTransiter,
                                    xdata=timeObs,
                                    ydata=NormFlux,
                                    p0=initGuess,
