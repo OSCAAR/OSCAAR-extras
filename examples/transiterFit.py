@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import oscaar
 from scipy import optimize
 from numpy.random import shuffle
+from oscaar.extras.knownSystemParameters import returnSystemParams
 
 #Work below is from Nolan Matthews while relying on some of Brett Morris's
 #code, particularly the transitModel.py,simulatedLightCurve.py, and
@@ -37,26 +38,24 @@ def fake_data(stddev,RpRs,aRs,per,inc,midtrantime,gamma1,gamma2,ecc,argper):
     #fake_data = oscaar.occultquad(times,modelParams) + np.random(scale=stddev,size=np.size(times))
     
     #Uses alternate input parameters setup for occultquad.
-    perfect_data = oscaar.transitModel.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime,gamma1,gamma2)
+    perfect_data = oscaar.transitModel.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime,gamma1,gamma2,per,ecc,argper)
     random_dist = np.random.normal(scale=stddev,size=np.size(times))
     fk_data = perfect_data + random_dist
     
     return times,fk_data
 
 #Runs the intial fit using the LM least sq. algorithm. 
-def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess,fitLimbDark=False,plotting=True):
+def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess,gamma1,gamma2,perGuess,eccGuess,argPerGuess,fitLimbDark=False,plotting=True):
     
     #Setting up inital guess, dependent on inclusion of limb-darkening
     if fitLimbDark == False:
         initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess)
     elif fitLimbDark == 'linear':
-        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,0.5)
+        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,gamma1)
     elif fitLimbDark == 'quadratic':
-        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,0.2,0.3)
-
+        initGuess = (RpRsGuess,aRsGuess,incGuess,epochGuess,gamma1,gamma2)
     
-    [RpOverRs_database,aOverRs_databse,P_database,inc_database,ecc_database] = returnSystemParams.transiterParams(planet)
-    def occultquadForTransiter(t,p,ap,i,t0,gamma1=0.0,gamma2=0.0,P=P_database,e=ecc_database,longPericenter=0.0):
+    def occultquadForTransiter(t,p,ap,i,t0,gamma1=0.0,gamma2=0.0,P=perGuess,e=eccGuess,longPericenter=0.0):
         modelParams = [p,ap,P,i,gamma1,gamma2,e,longPericenter,t0]
         return oscaar.transitModel.occultquad(t,modelParams)
 
@@ -78,7 +77,7 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
     #If Convergence is True, look at the results to double check.
     else:
         print "Results from the inital fit w/ uncertainties based on the sq. root of the covariance matrix"
-        params = ["Rp/Rs","a/Rs","inc","Mid-Tran Time","Gamma 1","Gamma2"]
+        params = ["Rp/Rs","a/Rs","inc","Mid-Tran Time","Gamma 1","Gamma 2"]
         for i in range(0,np.size(fit)):
             print params[i],fit[i],"+/-",np.sqrt(success[i][i])
         print ""
@@ -86,11 +85,11 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
     #Visually check to see if it's reasonable
     if plotting == True:
         if fitLimbDark == False:
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
+            plt.plot(timeObs,occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
         elif fitLimbDark == 'linear':
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4]))            
+            plt.plot(timeObs,occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4]))            
         elif fitLimbDark == 'quadratic':
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5]))            
+            plt.plot(timeObs,occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5]))            
         
         plt.plot(timeObs,NormFlux,'o')
         plt.title('Result from initial LM Fit')
@@ -110,20 +109,25 @@ def shuffle_func(x):
 
 #Function that allows one to determine model uncertainties using a random
 #Monte Carlo method. 
-def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
+def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,perGuess,eccGuess,argPerGuess,plotting=False):
 
+    def occultquadForTransiter(t,p,ap,i,t0,gamma1=0.0,gamma2=0.0,P=perGuess,e=eccGuess,longPericenter=argPerGuess):
+        modelParams = [p,ap,P,i,gamma1,gamma2,e,longPericenter,t0]
+        return oscaar.transitModel.occultquad(t,modelParams)
+    
+    planet = 'GJ 1214 b'
     RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
     
     #Create model, dependent on inclusion of limb-darkening
     if len(fit) == 4:
-        modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3])
+        modelOut  = occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3])
         initGuess = (fit[0],fit[1],fit[2],fit[3])
     elif len(fit) == 5:
-        modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4])
+        modelOut  = occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4])
         initGuess = (fit[0],fit[1],fit[2],fit[3],fit[4])
         gam1Fit = fit[4]
     elif len(fit) == 6:
-        modelOut  = oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5])
+        modelOut  = occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5])
         initGuess = (fit[0],fit[1],fit[2],fit[3],fit[4],fit[5])
         gam1Fit,gam2Fit = fit[4],fit[5]
     
@@ -144,7 +148,7 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
         
         #Generate random dataset and fit to the function.
         randSet = MCset + modelOut
-        fit,success=optimize.curve_fit(oscaar.transitModel.occultquadForTransiter,
+        fit,success=optimize.curve_fit(occultquadForTransiter,
                                     xdata=timeObs,
                                    ydata=randSet,
                                    p0=initGuess,
@@ -165,24 +169,24 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,plotting=False):
             
         if plotting == True:
             if len(fit) == 4:
-                plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
+                plt.plot(timeObs,occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3]))
             elif len(fit) == 5:
-                plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4]))
+                plt.plot(timeObs,occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4]))
             elif len(fit) == 6:
-                plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5]))
+                plt.plot(timeObs,occultquadForTransiter(timeObs,fit[0],fit[1],fit[2],fit[3],fit[4],fit[5]))
 
     #Visually compare MC fits to inital fit and observational data.
     if plotting == True:
         plt.errorbar(timeObs,NormFlux,yerr=flux_error,linestyle='None',marker='.',label="Data")
         
         if len(fit) == 4:
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),
+            plt.plot(timeObs,occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit),
                      lw=2.0,color='k',label="Inital Fit")
         elif len(fit) == 5:
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit,gam1Fit),
+            plt.plot(timeObs,occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit,gam1Fit),
                      lw=2.0,color='k',label="Inital Fit")
         elif len(fit) == 6:
-            plt.plot(timeObs,oscaar.transitModel.occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit,gam1Fit,gam2Fit),
+            plt.plot(timeObs,occultquadForTransiter(timeObs,RpFit,aRsFit,incFit,epochFit,gam1Fit,gam2Fit),
                      lw=2.0,color='k',label="Inital Fit")
         plt.title('Results from Random MC Fits')
         plt.xlabel('JD (days)')
