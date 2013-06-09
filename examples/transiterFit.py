@@ -38,7 +38,8 @@ def fake_data(stddev,RpRs,aRs,per,inc,midtrantime,gamma1,gamma2,ecc,argper):
     #fake_data = oscaar.occultquad(times,modelParams) + np.random(scale=stddev,size=np.size(times))
     
     #Uses alternate input parameters setup for occultquad.
-    perfect_data = oscaar.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime,gamma1,gamma2,per,ecc,argper)
+    modelParams=[RpRs,aRs,per,inc,gamma1,gamma2,ecc,argper,midtrantime]
+    perfect_data = oscaar.occultquad(times,modelParams)
     random_dist = np.random.normal(scale=stddev,size=np.size(times))
     fk_data = perfect_data + random_dist
     
@@ -66,6 +67,7 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
                                    p0=initGuess,
                                    sigma=flux_error,
                                    maxfev=100000,
+                                   factor=0.2,
                                    xtol=2e-15,
                                    ftol=2e-16)
 
