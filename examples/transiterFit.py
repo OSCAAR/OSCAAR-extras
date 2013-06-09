@@ -38,7 +38,7 @@ def fake_data(stddev,RpRs,aRs,per,inc,midtrantime,gamma1,gamma2,ecc,argper):
     #fake_data = oscaar.occultquad(times,modelParams) + np.random(scale=stddev,size=np.size(times))
     
     #Uses alternate input parameters setup for occultquad.
-    perfect_data = oscaar.transitModel.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime,gamma1,gamma2,per,ecc,argper)
+    perfect_data = oscaar.occultquadForTransiter(times,RpRs,aRs,inc,midtrantime,gamma1,gamma2,per,ecc,argper)
     random_dist = np.random.normal(scale=stddev,size=np.size(times))
     fk_data = perfect_data + random_dist
     
@@ -57,7 +57,7 @@ def run_LMfit(timeObs,NormFlux,flux_error,RpRsGuess,aRsGuess,incGuess,epochGuess
     
     def occultquadForTransiter(t,p,ap,i,t0,gamma1=0.0,gamma2=0.0,P=perGuess,e=eccGuess,longPericenter=0.0):
         modelParams = [p,ap,P,i,gamma1,gamma2,e,longPericenter,t0]
-        return oscaar.transitModel.occultquad(t,modelParams)
+        return oscaar.occultquad(t,modelParams)
 
     #Runs the inital fit
     fit,success=optimize.curve_fit(occultquadForTransiter,
@@ -113,7 +113,7 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,perGuess,eccGuess,a
 
     def occultquadForTransiter(t,p,ap,i,t0,gamma1=0.0,gamma2=0.0,P=perGuess,e=eccGuess,longPericenter=argPerGuess):
         modelParams = [p,ap,P,i,gamma1,gamma2,e,longPericenter,t0]
-        return oscaar.transitModel.occultquad(t,modelParams)
+        return oscaar.occultquad(t,modelParams)
     
     planet = 'GJ 1214 b'
     RpFit,aRsFit,incFit,epochFit = fit[0],fit[1],fit[2],fit[3]
@@ -206,3 +206,5 @@ def run_MCfit(n_iter,timeObs,NormFlux,flux_error,fit,success,perGuess,eccGuess,a
         print "Gamma 1: ",np.mean(gam1),"+/-",np.std(gam1)
     if len(fit) == 6:
         print "Gamma 2: ",np.mean(gam2),"+/-",np.std(gam2)
+        
+    return Rp,aRs,inc,mid,gam1,gam2
