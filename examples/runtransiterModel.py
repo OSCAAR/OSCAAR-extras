@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 import oscaar
 from scipy import optimize
 from numpy.random import shuffle
-import transiterFit
+from oscaar import transiterFit
 from oscaar.extras.knownSystemParameters import returnSystemParams
 
 #Planetary Parameters to create fake data. 
