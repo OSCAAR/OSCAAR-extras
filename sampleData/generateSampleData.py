@@ -69,9 +69,9 @@ imageDimensionY = 40
 starDimensions = 4       ## Pixel dimensions of the stars
 skyBackground = 500      ## Background counts from sky brightness
 darkBackground = 100     ## Background counts from detector
-targetFluxOOT = 10000    ## Flux (in counts) from each pixel of the unocculted target star (out-of-transit)
-relativeFluxCompA = 0.85 ## Flux from comp A relative to target
-relativeFluxCompB = 0.95 ## Flux from comp B relative to target
+targetFluxOOT = 15000    ## Flux (in counts) from each pixel of the unocculted target star (out-of-transit)
+relativeFluxCompA = 0.20 ## Flux from comp A relative to target
+relativeFluxCompB = 0.80 ## Flux from comp B relative to target
 plotModel = False        ## Plot the injected transit light curve
 createMasterFlatNow = True  ## Use oscaar to create a master flat from the freshly generated flat frames
 
