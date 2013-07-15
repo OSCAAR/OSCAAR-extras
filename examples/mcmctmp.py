@@ -14,5 +14,5 @@ burnFraction = 0.20
 mcmcinstance = oscaar.fitting.mcmcfit(dataBankPath,initParams,initBeta,Nsteps,\
                 saveInterval,idealAcceptanceRate,burnFraction)
 
-mcmcinstance.run(updatepkl=True,plots=True)
+mcmcinstance.run(updatepkl=True)
 mcmcinstance.plot()
