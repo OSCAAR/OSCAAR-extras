@@ -57,6 +57,8 @@ from glob import glob
 from matplotlib import pyplot as plt
 import os
 import oscaar
+import oscaar.transitModel as transitModel
+import oscaar.systematics as systematics
 
 #################################################################
 ## Tweak these parameters, if you like!
@@ -98,7 +100,7 @@ compBX = [100-starDimensions/2,100+starDimensions/2]
 starsY = [imageDimensionY/2-starDimensions/2,imageDimensionY/2+starDimensions/2]
 
 np.savetxt(os.path.join(os.path.dirname(__file__),'modelParams.txt'),modelParams)
-modelLightCurve = oscaar.occultquad(times,modelParams)
+modelLightCurve = transitModel.occultquad(times,modelParams)
 if plotModel: 
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
@@ -136,7 +138,7 @@ if createMasterFlatNow:
     flatPaths = glob(os.path.join(os.path.dirname(__file__),'images/simulatedImg-???f.fits'))
     flatDarkPaths = glob(os.path.join(os.path.dirname(__file__),'images/simulatedImg-???d.fits'))   ## Use the same darks
     masterFlatSavePath = os.path.join(os.path.dirname(__file__),'images/masterFlat.fits')   ## Where to save the master
-    oscaar.standardFlatMaker(flatPaths,flatDarkPaths,masterFlatSavePath,plots=False)
+    systematics.standardFlatMaker(flatPaths,flatDarkPaths,masterFlatSavePath,plots=False)
 
 
 ## Create data images
