@@ -121,7 +121,7 @@ starShapedMatrix = np.zeros([starDimensions,starDimensions])
 ## Simulate dark frames with shot noise
 for i in range(NdarkImages):
     darkFrame = darkBackground + np.random.normal(imageShapedMatrix,np.sqrt(darkBackground))
-    darkFrame = np.require(darkFrame,dtype=int)   ## Require integer counts
+    darkFrame = np.require(darkFrame,dtype=np.int32)   ## Require integer counts
     pyfits.writeto(os.path.join(os.path.dirname(__file__),'images/simulatedImg-'+str(i).zfill(3)+'d.fits'),darkFrame)
 
 ## Simulate ideal flat frames (perfectly flat)
@@ -129,7 +129,7 @@ for i in range(NflatImages):
     ## Flats will be completely flat -- ie, we're pretending that we have a 
     ##      perfect optical path with no spatial flux variations.
     flatField = np.random.normal(imageShapedMatrix,np.sqrt(flatFieldCounts)) +  flatFieldCounts
-    flatField = np.require(flatField,dtype=int)## Require integer counts
+    flatField = np.require(flatField,dtype=np.int32)## Require integer counts
     pyfits.writeto(os.path.join(os.path.dirname(__file__),'images/simulatedImg-'+str(i).zfill(3)+'f.fits'),flatField)
 
 
@@ -165,7 +165,7 @@ for i in range(NdataImages):
     simulatedImage[starsY[0]+randomPositionJitterY:starsY[1]+randomPositionJitterY,compBX[0]+randomPositionJitterX:compBX[1]+randomPositionJitterX] += compB
 
     ## Force counts to integers, save.
-    simulatedImage = np.require(simulatedImage,dtype=int)   ## Require integer counts before save
+    simulatedImage = np.require(simulatedImage,dtype=np.int32)   ## Require integer counts before save
 
     header = pyfits.Header()
     header.append(('JD',times[i],'Simulated Time (Julian Date)'))
